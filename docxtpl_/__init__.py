@@ -4,6 +4,7 @@ Created : 2015-03-12
 
 @author: Eric Lapouyade
 '''
+print('got the right one')
 
 __version__ = '0.4.13'
 
@@ -13,6 +14,7 @@ from docx.opc.oxml import serialize_part_xml, parse_xml
 import docx.oxml.ns
 from docx.opc.constants import RELATIONSHIP_TYPE as REL_TYPE
 from jinja2 import Template
+import jinja2schema
 from cgi import escape
 import re
 import six
@@ -55,8 +57,8 @@ class DocxTemplate(object):
             fh.write(self.get_xml())
 
     def patch_xml(self,src_xml):
-        # strip all xml tags inside {% %} and {{ }} that MS word can insert into xml source
-        # also unescape html entities
+        '''Function that strips all xml tags inside {% %} and {{ }} that MS word can insert into xml source, also unescapes html entities'''
+
         src_xml = re.sub(r'(?<={)(<[^>]*>)+(?=[\{%])|(?<=[%\}])(<[^>]*>)+(?=\})','',src_xml,flags=re.DOTALL)
         def striptags(m):
             return re.sub('</w:t>.*?(<w:t>|<w:t [^>]*>)','',m.group(0),flags=re.DOTALL)
@@ -146,6 +148,10 @@ class DocxTemplate(object):
         self.docx._part._rels[relKey]._target._blob = xml
 
     def render(self,context,jinja_env=None):
+        '''
+        Takes dict-like `context` and replaces the jinja tags in the docx with the appropriate values from `context` 
+        Note that if there is a jinja tag referencing something not in `context`, no error will be raised
+        '''
         # Body
         xml_src = self.build_xml(context,jinja_env)
 
@@ -345,6 +351,16 @@ class DocxTemplate(object):
         self.pre_processing()
         self.docx.save(filename,*args,**kwargs)
         self.post_processing(filename)
+
+    def get_context(self):
+        '''
+        Returns a `dict` with the proper structure to be passed in as the `context` argument of `self.render`. 
+        All lists will have only one entry of the proper type
+        '''
+        xml = self.patch_xml(self.get_xml())
+        return jinja2schema.infer(xml)
+
+
 
 
 class Subdoc(object):
