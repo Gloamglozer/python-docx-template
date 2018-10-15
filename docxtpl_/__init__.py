@@ -4,7 +4,6 @@ Created : 2015-03-12
 
 @author: Eric Lapouyade
 '''
-print('got the right one')
 
 __version__ = '0.4.13'
 
